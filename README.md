@@ -1,23 +1,33 @@
-<div align="center">
 <h1>dwlb</h1>
 
 My fork of [dwlb](https://github.com/kolunmi/dwlb), a fast, feature-complete bar for [dwl](https://github.com/djpohly/dwl).
 
+<div align="center">
 ![screenshot 1](./docs/screenshot1.png "screenshot1")
-
 </div>
+
+## Fork Features
+
+This fork includes minor changes and personalisations:
+
+- Properly renders multi-color glyphs instead of treating them as monochrome masks.
+- Replaced and updated deprecated `fcft` scaling filter for high-DPI displays.
+- Personalised Defaults:
+  - Vacant tags are hidden by default.
+  - Adjusted padding and color scheme.
+  - Default font set to FiraMono Nerd Font.
 
 ## Dependencies
 
 - libwayland-client
 - libwayland-cursor
 - pixman
-- fcft
+- fcft (>= 3.0.0)
 
 ## Installation
 
 ```bash
-git clone https://github.com/kolunmi/dwlb
+git clone [https://github.com/afj8z/dwlb](https://github.com/afj8z/dwlb)
 cd dwlb
 make
 make install
@@ -25,65 +35,80 @@ make install
 
 ## Usage
 
-Pass `dwlb` as an argument to dwl's `-s` flag. This will populate each connected output with a bar. For example:
+You can launch `dwlb` directly within the `dwl` command or as a standalone process.
+
+### Basic
+
+Pass `dwlb` as an argument to dwl's `-s` flag.
 
 ```bash
-dwl -s 'dwlb -font "monospace:size=16"'
+dwl -s 'dwlb -font "FiraMono Nerd Font Mono:size=16"'
 ```
 
-## Ipc
+### With Status Monitor & Startup Script
 
-If dwl is [patched](https://codeberg.org/dwl/dwl-patches/src/branch/main/patches/ipc) appropriately, dwlb is capable of communicating directly with dwl. When ipc is enabled with `-ipc`, dwlb does not read from stdin, and clicking tags functions as you would expect. Ipc can be disabled with `-no-ipc`.
-
-## Commands
-
-Command options send instructions to existing instances of dwlb. All commands take at least one argument to specify a bar on which to operate. This may be zxdg_output_v1 name, "all" to affect all outputs, or "selected" for the current output.
-
-### Status Text
-
-The `-status` and `-title` commands are used to write status text. The text may contain in-line commands in the following format: `^cmd(argument)`.
-
-| In-Line Command     | Description                                                                 |
-| ------------------- | --------------------------------------------------------------------------- |
-| `^fg(HEXCOLOR)`     | Sets foreground color to `HEXCOLOR`.                                        |
-| `^bg(HEXCOLOR)`     | Sets background color to `HEXCOLOR`.                                        |
-| `^lm(SHELLCOMMAND)` | Begins or terminates left mouse button region with action `SHELLCOMMAND`.   |
-| `^mm(SHELLCOMMAND)` | Begins or terminates middle mouse button region with action `SHELLCOMMAND`. |
-| `^rm(SHELLCOMMAND)` | Begins or terminates right mouse button region with action `SHELLCOMMAND`.  |
-| `^us(SHELLCOMMAND)` | Begins or terminates mouse scroll up region with action `SHELLCOMMAND`.     |
-| `^ds(SHELLCOMMAND)` | Begins or terminates mouse scroll down region with action `SHELLCOMMAND`.   |
-
-In this example, clicking the text highlighted in red will spawn the [foot](https://codeberg.org/dnkl/foot) terminal.
+1.  **Launch `dwlb`** in the background with IPC enabled and desired scaling.
+2.  **Pipe status info** into `dwlb` using `-status-stdin`.
 
 ```bash
-dwlb -status all 'text ^bg(ff0000)^lm(foot)text^bg()^lm() text'
+#!/bin/sh
+
+# Cleanup previous instances
+killall -9 dwlb aslstatus 2> /dev/null
+
+# Processes you want to launch alongside dwl
+hypridle &
+swww-daemon &
+mako &
+
+# Launch dwlb (IPC enabled, scaled for HiDPI)
+# Sleep ensures dwlb is ready before accepting status input
+(dwlb -ipc -scale 2; sleep 0.2) &
+
+# Pipe aslstatus output to dwlb
+aslstatus -s | dwlb -status-stdin all &
 ```
 
-A color command with no argument reverts to the default value. `^^` represents a single `^` character. Status commands can be disabled with `-no-status-commands`.
+## IPC
 
-## Scaling
+If `dwl` is [patched with IPC](https://codeberg.org/dwl/dwl-patches/src/branch/main/patches/ipc), `dwlb` can communicate directly with it.
 
-If you use scaling in Wayland, you can specify `buffer_scale` through config file or by passing it as an option (only integer values):
+- Enable with `-ipc`.
+- Clicking tags/layouts works instantly.
+- Disable with `-no-ipc`.
+
+## Commands & Status Syntax
+
+Control `dwlb` instances via command line options. Target specific outputs with a name, `all`, or `selected`.
+
+### Inline Formatting
+
+Status text sent to stdin can contain formatting commands: `^cmd(argument)`.
+
+| Command    | Description                                 |
+| :--------- | :------------------------------------------ |
+| `^fg(HEX)` | Set foreground color (e.g., `^fg(ff0000)`). |
+| `^bg(HEX)` | Set background color.                       |
+| `^lm(CMD)` | Left click action.                          |
+| `^mm(CMD)` | Middle click action.                        |
+| `^rm(CMD)` | Right click action.                         |
+| `^us(CMD)` | Scroll up action.                           |
+| `^ds(CMD)` | Scroll down action.                         |
+
+**Example:**
 
 ```bash
-dwlb -scale 2
+dwlb -status all 'text ^bg(ff0000)^lm(foot)Click Me^bg()^lm() text'
 ```
 
-This will render both surface and a cursor with 2x detail. If your monitor is set to 1.25 or 1.5 scaling, setting scale to 2 will also work as compositor will downscale the buffer properly.
+## Configuration
 
-## Other Options
+Edit `config.h` to change compile-time defaults (colors, fonts, tags).
 
-Run `dwlb -h` for a full list of options.
-
-## Someblocks
-
-To use someblocks, or any program that outputs to stdout, with dwlb, use this one-liner:
-
-```bash
-someblocks -p | dwlb -status-stdin all
-```
+- **Runtime Options:** Run `dwlb -h` for a full list of flags (e.g., `-bottom`, `-hide-vacant-tags`).
 
 ## Acknowledgements
 
+- [kolunmi](https://github.com/kolunmi) (Original Author)
 - [dtao](https://github.com/djpohly/dtao)
 - [somebar](https://sr.ht/~raphi/somebar/)
