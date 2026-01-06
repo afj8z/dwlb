@@ -5,7 +5,7 @@
 #include <fcft/fcft.h>
 #include <fcntl.h>
 #include <linux/input-event-codes.h>
-#include <pixman-1/pixman.h>
+#include <pixman.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -1834,7 +1834,10 @@ int main(int argc, char **argv) {
     } else if (!strcmp(argv[i], "-scale")) {
       if (++i >= argc)
         DIE("Option -scale requires an argument");
-      buffer_scale = strtoul(argv[i], &argv[i] + strlen(argv[i]), 10);
+      char *end;
+      buffer_scale = strtoul(argv[i], &end, 10);
+      if (*end)
+        DIE("Invalid number for -scale");
     } else if (!strcmp(argv[i], "-v")) {
       fprintf(stderr, PROGRAM " " VERSION "\n");
       return 0;
@@ -1860,7 +1863,6 @@ int main(int argc, char **argv) {
   if (!compositor || !shm || !layer_shell || !output_manager ||
       (ipc && !dwl_wm))
     DIE("Compositor does not support all needed protocols");
-
 
   // Updated deprecated fcft font scaling
 
